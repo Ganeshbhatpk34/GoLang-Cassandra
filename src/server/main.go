@@ -1,14 +1,16 @@
 package main
 
 import (
-  "github.com/gorilla/mux"
-  "net/http"
-  "os"
-  "log"
-  "server/utils"
-  "github.com/rs/cors"
+	"log"
+	"net/http"
+	"os"
+	"server/utils"
 
-  "fmt"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+
+	"fmt"
+
 	"github.com/gocql/gocql"
 )
 
@@ -21,6 +23,17 @@ type Emp struct {
 	age       int
 }
 
+type EmpSample struct {
+	Empid     string `json:"Empid"`
+	FirstName string `json:"FirstName"`
+	LastName  string `json:"LastName"`
+	Age       int    `json:"Age"`
+}
+
+type PastWeekWeatherArray struct {
+	Emp string
+}
+
 func init() {
 	var err error
 
@@ -30,43 +43,46 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-  fmt.Println("cassandra init done")
-  
+	fmt.Println("cassandra init done")
+
 }
 
 func main() {
-  r := mux.NewRouter()
+	r := mux.NewRouter()
 
-  r.HandleFunc("/hello-world", helloWorld)
+	r.HandleFunc("/hello-world", helloWorld)
 
-  // Solves Cross Origin Access Issue
-  c := cors.New(cors.Options{
-    AllowedOrigins: []string{"http://localhost:4200"},
-  })
-  handler := c.Handler(r)
+	// Solves Cross Origin Access Issue
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:4200"},
+	})
+	handler := c.Handler(r)
 
-  srv := &http.Server{
-    Handler: handler,
-    Addr:    ":" + os.Getenv("PORT"),
-  }
+	srv := &http.Server{
+		Handler: handler,
+		Addr:    ":" + os.Getenv("PORT"),
+	}
 
-  log.Fatal(srv.ListenAndServe())
+	log.Fatal(srv.ListenAndServe())
 }
 
 func helloWorld(w http.ResponseWriter, r *http.Request) {
-  var data = struct {
-    Title string `json:"title"`
-  }{
-    Title: "Golang + Angular Starter Kit",
-  }
+	var data = struct {
+		Title string                 `json:"title"`
+		Data  []PastWeekWeatherArray `json:"data"`
+	}{
+		Title: "RHBUS SOLUTIONS",
+		Data:  getEmps(w),
+	}
 
-  jsonBytes, err := utils.StructToJson(data); if err != nil {
-    fmt.Print(err)
-  }
+	jsonBytes, err := utils.StructToJson(data)
+	if err != nil {
+		fmt.Print(err)
+	}
 
-  w.Header().Set("Content-Type", "application/json")
-  w.Write(jsonBytes)
-  return
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonBytes)
+	return
 }
 
 func createEmp(emp Emp) {
@@ -78,23 +94,38 @@ func createEmp(emp Emp) {
 	}
 }
 
-func getEmps() []Emp {
+func getEmps(w http.ResponseWriter) []PastWeekWeatherArray {
 	fmt.Println("Getting all Employees")
-	var emps []Emp
+	//var emp []Emp
+	var emps []EmpSample
+	var data string
+
+	var pastWeekWeatherArray []PastWeekWeatherArray
 	m := map[string]interface{}{}
 
 	iter := Session.Query("SELECT * FROM employees").Iter()
-	for iter.MapScan(m) {
-		emps = append(emps, Emp{
-			id:        m["empid"].(string),
-			firstName: m["first_name"].(string),
-			lastName:  m["last_name"].(string),
-			age:       m["age"].(int),
-		})
-		m = map[string]interface{}{}
+	for {
+		for iter.MapScan(m) {
+			emps = append(emps, EmpSample{
+				Empid:     string(m["empid"].(string)),
+				FirstName: string(m["first_name"].(string)),
+				LastName:  string(m["last_name"].(string)),
+				Age:       int(m["age"].(int)),
+			})
+			jsonBytes1, err := utils.StructToJson(emps)
+			if err != nil {
+				fmt.Print(err)
+			}
+			data = string(jsonBytes1)
+			m = map[string]interface{}{}
+		}
+		if !iter.MapScan(m) {
+			pastWeekWeatherArray = append(pastWeekWeatherArray, PastWeekWeatherArray{
+				Emp: data,
+			})
+			return pastWeekWeatherArray
+		}
 	}
-
-	return emps
 }
 
 func updateEmp(emp Emp) {
