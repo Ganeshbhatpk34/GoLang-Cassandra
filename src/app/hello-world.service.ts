@@ -9,12 +9,12 @@ export class HelloWorldService {
   constructor(private http: Http) { }
 
   getTitle() {
-    return this.http.get(`${environment.serverUrl}/hello-world`,"ANY")
+    return this.http.get(`${environment.serverUrl}/hello-world`)
       .map(response => response.json());
   }
 
-  getData() {
-    return this.http.get(`${environment.serverUrl}/getEmps`)
+  Operation(fn,params) {
+    return this.http.get(`${environment.serverUrl}/`+ fn + `/` + JSON.stringify(params))
       .map(response => response.json());
   }
 

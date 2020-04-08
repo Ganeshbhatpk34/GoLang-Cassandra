@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -51,6 +52,9 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/hello-world", helloWorld)
+	r.HandleFunc("/createEmp/{emp}", createEmp)
+	r.HandleFunc("/updateEmp/{emp}", updateEmp)
+	r.HandleFunc("/deleteEmp/{emp}", deleteEmp)
 
 	// Solves Cross Origin Access Issue
 	c := cors.New(cors.Options{
@@ -85,13 +89,35 @@ func helloWorld(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func createEmp(emp Emp) {
-	fmt.Println(" **** Creating new emp ****\n", emp)
+func createEmp(w http.ResponseWriter, r *http.Request) {
+	var status string
+	emp := mux.Vars(r)
+	w.WriteHeader(http.StatusOK)
+
+	var myStoredVariable EmpSample
+	json.Unmarshal([]byte(emp["emp"]), &myStoredVariable)
+	fmt.Println(" **** Creating new emp ****\n", myStoredVariable)
+	status = "SUCCESS"
 	if err := Session.Query("INSERT INTO employees(empid, first_name, last_name, age) VALUES(?, ?, ?, ?)",
-		emp.id, emp.firstName, emp.lastName, emp.age).Exec(); err != nil {
+		myStoredVariable.Empid, myStoredVariable.FirstName, myStoredVariable.LastName, myStoredVariable.Age).Exec(); err != nil {
 		fmt.Println("Error while inserting Emp")
 		fmt.Println(err)
+		status = "FAILED"
 	}
+	var data = struct {
+		Title string `json:"title"`
+	}{
+		Title: status,
+	}
+
+	jsonBytes, err := utils.StructToJson(data)
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonBytes)
+	return
 }
 
 func getEmps(w http.ResponseWriter) []PastWeekWeatherArray {
@@ -128,19 +154,64 @@ func getEmps(w http.ResponseWriter) []PastWeekWeatherArray {
 	}
 }
 
-func updateEmp(emp Emp) {
-	fmt.Printf("Updating Emp with id = %s\n", emp.id)
+func updateEmp(w http.ResponseWriter, r *http.Request) {
+	var status string
+	emp := mux.Vars(r)
+	w.WriteHeader(http.StatusOK)
+
+	var myStoredVariable EmpSample
+	json.Unmarshal([]byte(emp["emp"]), &myStoredVariable)
+	fmt.Println(" **** Creating new emp ****\n", myStoredVariable)
+	status = "SUCCESS"
 	if err := Session.Query("UPDATE employees SET first_name = ?, last_name = ?, age = ? WHERE empid = ?",
-		emp.firstName, emp.lastName, emp.age, emp.id).Exec(); err != nil {
+		myStoredVariable.FirstName, myStoredVariable.LastName, myStoredVariable.Age, myStoredVariable.Empid).Exec(); err != nil {
 		fmt.Println("Error while updating Emp")
 		fmt.Println(err)
+		status = "FAILED"
 	}
+	var data = struct {
+		Title string `json:"title"`
+	}{
+		Title: status,
+	}
+
+	jsonBytes, err := utils.StructToJson(data)
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonBytes)
+	return
 }
 
-func deleteEmp(id string) {
-	fmt.Printf("Deleting Emp with id = %s\n", id)
-	if err := Session.Query("DELETE FROM employees WHERE empid = ?", id).Exec(); err != nil {
-		fmt.Println("Error while deleting Emp")
+func deleteEmp(w http.ResponseWriter, r *http.Request) {
+	var status string
+	emp := mux.Vars(r)
+	w.WriteHeader(http.StatusOK)
+
+	var myStoredVariable EmpSample
+	json.Unmarshal([]byte(emp["emp"]), &myStoredVariable)
+	fmt.Println(" **** Creating new emp ****\n", myStoredVariable)
+	status = "SUCCESS"
+	if err := Session.Query("DELETE FROM employees WHERE empid = ?",
+		myStoredVariable.Empid).Exec(); err != nil {
+		fmt.Println("Error while Deleting Emp")
 		fmt.Println(err)
+		status = "FAILED"
 	}
+	var data = struct {
+		Title string `json:"title"`
+	}{
+		Title: status,
+	}
+
+	jsonBytes, err := utils.StructToJson(data)
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonBytes)
+	return
 }
