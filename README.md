@@ -6,6 +6,10 @@
 - You have Angular CLI & npm installed.
 - You have Go installed and GOPATH set up properly.
 
+## Import Project
+$ git init
+$ git clone https://github.com/Ganeshbhatpk34/GoLang-Cassandra.git
+
 ## Before You Begin
 Instead of running `npm install` as you normally would, you need to run `npm run install-dependencies` which will run `npm install` for you in addition to installing the required Go dependencies for this boilerplate project.
 
